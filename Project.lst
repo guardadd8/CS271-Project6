@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/05/26 17:48:24
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
 5Thermometer Readings Program     (Proj6_guardadd.asm	     Page 1 - 1
 
 
@@ -63,6 +63,7 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/05/26 17:48:24
 				    pop		eax
 				ENDM
 
+ = 00001000			BUFFER_SIZE		= 4096
  = 00000020			MAX_CHARS		= 32
  = 00000018			TEMPS_PER_DAY	= 24
  = 0000002C			DELIMITER		= ','
@@ -127,17 +128,17 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/05/26 17:48:24
 	   6E 61 6D 65 2E
 	   0D 0A 00
 
- 00000119  00000020 [			fileName		BYTE	MAX_CHARS	DUP(?)
+ 00000119  00000020 [			fileName		BYTE	MAX_CHARS		DUP(?)
 	    00
 	   ]
  00000139 00000000			bytesRead		DWORD	?
- 0000013D  00000018 [			fileBuffer		BYTE	TEMPS_PER_DAY	DUP(?)
+ 0000013D  00001000 [			fileBuffer		BYTE	BUFFER_SIZE		DUP(?)
 	    00
 	   ]
- 00000155  00000018 [			tempArray		BYTE	TEMPS_PER_DAY	DUP(?)
+ 0000113D  00000018 [			tempArray		SBYTE	TEMPS_PER_DAY	DUP(?)
 	    00
 	   ]
- 0000016D 00000000			fileHandle		DWORD	?
+ 00001155 00000000			fileHandle		DWORD	?
 
  00000000			.code
  00000000			main PROC
@@ -159,39 +160,130 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/05/26 17:48:24
 
  0000002E  BA 00000119 R		mov		edx, OFFSET fileName
  00000033  E8 00000000 E		call	OpenInputFile
- 00000038  A3 0000016D R		mov		fileHandle, eax
+ 00000038  A3 00001155 R		mov		fileHandle, eax
 
  0000003D  83 F8 FF			cmp		eax, INVALID_HANDLE_VALUE
- 00000040  74 20			je		_invalidFile
+ 00000040  74 4B			je		_invalidFile
 					
- 00000042  A1 0000016D R		mov		eax, fileHandle
+ 00000042  A1 00001155 R		mov		eax, fileHandle
  00000047  BA 0000013D R	    mov		edx, OFFSET fileBuffer
- 0000004C  B9 00000018		    mov		ecx, TEMPS_PER_DAY		; necessary line or redundant?
+ 0000004C  B9 00001000		    mov		ecx, BUFFER_SIZE
  00000051  E8 00000000 E	    call	ReadFromFile
-
-					; Add Proc calls for parsing
-
- 00000056  A1 0000016D R		mov		eax, fileHandle
+ 00000056  A1 00001155 R		mov		eax, fileHandle
  0000005B  E8 00000000 E	    call	CloseFile
- 00000060  EB 0C		    jmp		_exit
 
- 00000062			_invalidFile:
+ 00000060  68 0000013D R	    PUSH    OFFSET fileBuffer
+ 00000065  68 0000113D R	    PUSH    OFFSET tempArray
+ 0000006A  E8 00000031		    CALL    ParseTempsFromString
+					; Add Proc calls
+
+ 0000006F  BE 0000113D R	    mov esi, OFFSET tempArray            ; ESI points to the start of the array
+ 00000074  B9 00000018		    mov ecx, LENGTHOF tempArray; ECX holds the loop counter (number of elements)
+
+ 00000079			print_loop:
+ 00000079  0F BE 06		    movsx eax, BYTE PTR [esi]            ; Sign-extend the 1-byte SBYTE into the 32-bit EAX register
+ 0000007C  E8 00000000 E	    call  WriteInt                       ; Print the correctly formatted signed integer
+ 00000081  E8 00000000 E	    call  Crlf                            
+
+ 00000086  83 C6 01		    add   esi, TYPE tempArray            ; Successfully moves forward by 1 byte
+ 00000089  E2 EE		    loop  print_loop  
+					
+ 0000008B  EB 0C		    jmp		_exit
+
+ 0000008D			_invalidFile:
 					mDisplayString		OFFSET fileErrorMsg
- 00000062  52		     1		push	edx
- 00000063  BA 00000102 R     1		mov		edx, OFFSET fileErrorMsg
- 00000068  E8 00000000 E     1		call	WriteString
- 0000006D  5A		     1		pop		edx
+ 0000008D  52		     1		push	edx
+ 0000008E  BA 00000102 R     1		mov		edx, OFFSET fileErrorMsg
+ 00000093  E8 00000000 E     1		call	WriteString
+ 00000098  5A		     1		pop		edx
 
- 0000006E			_exit:
+ 00000099			_exit:
 					Invoke ExitProcess,0
- 0000006E  6A 00	   *	    push   +000000000h
- 00000070  E8 00000000 E   *	    call   ExitProcess
- 00000075			main ENDP
+ 00000099  6A 00	   *	    push   +000000000h
+ 0000009B  E8 00000000 E   *	    call   ExitProcess
+ 000000A0			main ENDP
 
+ 000000A0			ParseTempsFromString PROC
+ 000000A0  55			    push    ebp
+ 000000A1  8B EC		    mov     ebp, esp
+ 000000A3  60			    pushad
 
+ 000000A4  8B 75 0C		    mov     esi, [ebp + 12]     ; esi = pointer to fileBuffer string
+ 000000A7  8B 7D 08		    mov     edi, [ebp + 8]      ; edi = pointer to tempArray destination
+				    
+ 000000AA  B9 00000000		    mov     ecx, 0              ; ecx will act as our running integer total
+ 000000AF  B3 00		    mov     bl, 0               ; bl will track negative flag (0 = positive, 1 = negative)
+ 000000B1  B7 00		    mov     bh, 0               ; bh will track if we processed any digits for this number (0 = no, 1 = yes)
+
+ 000000B3			_parseLoop:
+ 000000B3  8A 06		    mov     al, [esi]           ; Grab current character
+ 000000B5  46			    inc     esi                 ; Move pointer forward for next round
+				    
+ 000000B6  3C 00		    cmp     al, 0               ; Check for null terminator (end of file string)
+ 000000B8  74 40		    je      _saveFinal
+ 000000BA  3C 2C		    cmp     al, DELIMITER       ; Check for comma
+ 000000BC  74 22		    je      _saveValue
+ 000000BE  3C 0D		    cmp     al, 13              ; Check for Carriage Return (end of line)
+ 000000C0  74 1E		    je      _saveValue
+ 000000C2  3C 0A		    cmp     al, 10              ; Check for Line Feed
+ 000000C4  74 ED		    je      _parseLoop          ; Skip line feed, move to next character
+
+ 000000C6  3C 2B		    cmp     al, '+'             ; Is it an explicit plus sign?
+ 000000C8  74 E9		    je      _parseLoop          ; Just skip it and move to the numbers
+				    
+ 000000CA  3C 2D		    cmp     al, '-'             ; Is it a negative sign?
+ 000000CC  75 04		    jne     _isDigit
+ 000000CE  B3 01		    mov     bl, 1               ; Set negative flag to true
+ 000000D0  EB E1		    jmp     _parseLoop
+
+ 000000D2			_isDigit:
+ 000000D2  2C 30		    sub     al, '0'             ; Convert ASCII character to literal integer value
+ 000000D4  0F B6 C0		    movzx   eax, al
+				    
+ 000000D7  B7 01		    mov     bh, 1               ; Explicitly flag that we have processed a valid digit
+				    ; Multi-digit math: total = (total * 10) + new_digit
+ 000000D9  6B C9 0A		    imul    ecx, ecx, 10
+ 000000DC  03 C8		    add     ecx, eax
+ 000000DE  EB D3		    jmp     _parseLoop
+
+ 000000E0			_saveValue:
+				    ; If we haven't seen any actual digits yet, don't save anything
+ 000000E0  80 FF 00		    cmp     bh, 0
+ 000000E3  74 0A		    je      _resetFlags
+
+				    ; Check if negative flag was set
+ 000000E5  80 FB 01		    cmp     bl, 1
+ 000000E8  75 02		    jne     _store
+ 000000EA  F7 D9		    neg     ecx                 ; Negate the value if it was marked negative
+
+ 000000EC			_store:
+ 000000EC  88 0F		    mov     [edi], cl           ; Store the lower byte into tempArray
+ 000000EE  47			    inc     edi                 ; Move to next byte slot in array
+
+ 000000EF			_resetFlags:
+ 000000EF  B9 00000000		    mov     ecx, 0              ; Reset total accumulator
+ 000000F4  B3 00		    mov     bl, 0               ; Reset negative flag
+ 000000F6  B7 00		    mov     bh, 0               ; Reset digit validation tracker
+ 000000F8  EB B9		    jmp     _parseLoop
+
+ 000000FA			_saveFinal:
+				    ; Catch any trailing numbers that didn't end with a delimiter
+ 000000FA  80 FF 00		    cmp     bh, 0
+ 000000FD  74 09		    je      _done
+ 000000FF  80 FB 01		    cmp     bl, 1
+ 00000102  75 02		    jne     _storeFinal
+ 00000104  F7 D9		    neg     ecx
+ 00000106			_storeFinal:
+ 00000106  88 0F		    mov     [edi], cl
+
+ 00000108			_done:
+ 00000108  61			    popad
+ 00000109  5D			    pop     ebp
+ 0000010A  C2 0008		    ret     8
+ 0000010D			ParseTempsFromString ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/05/26 17:48:24
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
 5Thermometer Readings Program     (Proj6_guardadd.asm	     Symbols 2 - 1
 
 
@@ -294,8 +386,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000171 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000075 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00001159 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000010D Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -349,6 +441,15 @@ MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ParseDecimal32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ParseInteger32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ParseTempsFromString . . . . . .	P Near	 000000A0 _TEXT	Length= 0000006D Public STDCALL
+  _parseLoop . . . . . . . . . .	L Near	 000000B3 _TEXT	
+  _isDigit . . . . . . . . . . .	L Near	 000000D2 _TEXT	
+  _saveValue . . . . . . . . . .	L Near	 000000E0 _TEXT	
+  _store . . . . . . . . . . . .	L Near	 000000EC _TEXT	
+  _resetFlags  . . . . . . . . .	L Near	 000000EF _TEXT	
+  _saveFinal . . . . . . . . . .	L Near	 000000FA _TEXT	
+  _storeFinal  . . . . . . . . .	L Near	 00000106 _TEXT	
+  _done  . . . . . . . . . . . .	L Near	 00000108 _TEXT	
 PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -402,9 +503,10 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000075 Public STDCALL
-  _invalidFile . . . . . . . . .	L Near	 00000062 _TEXT	
-  _exit  . . . . . . . . . . . .	L Near	 0000006E _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000A0 Public STDCALL
+  print_loop . . . . . . . . . .	L Near	 00000079 _TEXT	
+  _invalidFile . . . . . . . . .	L Near	 0000008D _TEXT	
+  _exit  . . . . . . . . . . . .	L Near	 00000099 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -424,6 +526,7 @@ Symbols:
 @fardata . . . . . . . . . . . .	Text   	 FLAT
 @stack . . . . . . . . . . . . .	Text   	 FLAT
 ALT_MASK . . . . . . . . . . . .	Number	 00000003h   
+BUFFER_SIZE  . . . . . . . . . .	Number	 00001000h   
 CAPSLOCK_ON  . . . . . . . . . .	Number	 00000080h   
 CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
 CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
@@ -634,7 +737,7 @@ cyan . . . . . . . . . . . . . .	Number	 00000003h
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
 fileBuffer . . . . . . . . . . .	Byte	 0000013D _DATA	
 fileErrorMsg . . . . . . . . . .	Byte	 00000102 _DATA	
-fileHandle . . . . . . . . . . .	DWord	 0000016D _DATA	
+fileHandle . . . . . . . . . . .	DWord	 00001155 _DATA	
 fileNamePrompt . . . . . . . . .	Byte	 000000DA _DATA	
 fileName . . . . . . . . . . . .	Byte	 00000119 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
@@ -648,7 +751,7 @@ lightMagenta . . . . . . . . . .	Number	 0000000Dh
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-tempArray  . . . . . . . . . . .	Byte	 00000155 _DATA	
+tempArray  . . . . . . . . . . .	Byte	 0000113D _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
