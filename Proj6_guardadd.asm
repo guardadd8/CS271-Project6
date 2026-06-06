@@ -42,32 +42,62 @@ mDisplayChar MACRO charVal:req
     pop		eax
 ENDM
 
-MAX_CHARS		= 21
+BUFFER_SIZE		= 4096
+MAX_CHARS		= 32
 TEMPS_PER_DAY	= 24
 DELIMITER		= ','
 
 .data
 
-	introPrompt		BYTE	"Welcome to the intern error-corrector! I'll read a ','-delimited file storing a series of temperature values.",13,10
-					BYTE	"The file must be ASCII-formatted. I'll then reverse the ordering and provide the corrected temperature",13,10
-					BYTE	"ordering as a printout!",13,10,0
+	introPrompt		BYTE	"Welcome to the Temperature Value Program. This program will read a comma-delimited file",13,10
+					BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values and reverse",13,10
+					BYTE	"the ordering in order to print them.",13,10,0
+	fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
+	fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
 
-	userInput		BYTE	MAX_CHARS	DUP(?)
+	fileName		BYTE	MAX_CHARS		DUP(?)
 	bytesRead		DWORD	?
-	fileBuffer		BYTE	TEMPS_PER_DAY	DUP(?)
-	tempArray		BYTE	TEMPS_PER_DAY	DUP(?)
+	fileBuffer		BYTE	BUFFER_SIZE		DUP(?)
+	tempArray		SBYTE	TEMPS_PER_DAY	DUP(?)
+	fileHandle		DWORD	?
 
 .code
 main PROC
-	mGetString		OFFSET introPrompt, OFFSET userInput, MAX_CHARS, OFFSET bytesRead
+	mDisplayString	OFFSET introPrompt
+	mGetString		OFFSET fileNamePrompt, OFFSET fileName, MAX_CHARS, OFFSET bytesRead
 
+	mov		edx, OFFSET fileName
+	call	OpenInputFile
+	mov		fileHandle, eax
 
+	cmp		eax, INVALID_HANDLE_VALUE
+	je		_invalidFile
+	
+	mov		eax, fileHandle
+    mov		edx, OFFSET fileBuffer
+    mov		ecx, BUFFER_SIZE
+    call	ReadFromFile
+	mov		eax, fileHandle
+    call	CloseFile
+
+	; Add Proc calls
+
+	
+    jmp		_exit
+
+_invalidFile:
+	mDisplayString		OFFSET fileErrorMsg
+
+_exit:
 	Invoke ExitProcess,0
 main ENDP
 
 ParseTempsFromString PROC
-
+	
 ENDP
 
+WriteTempsReverse PROC
+
+ENDP
 
 END main
