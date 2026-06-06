@@ -58,7 +58,7 @@ DELIMITER		= ','
 	fileName		BYTE	MAX_CHARS		DUP(?)
 	bytesRead		DWORD	?
 	fileBuffer		BYTE	BUFFER_SIZE		DUP(?)
-	tempArray		SBYTE	TEMPS_PER_DAY	DUP(?)
+	tempArray       SDWORD  TEMPS_PER_DAY   DUP(?)
 	fileHandle		DWORD	?
 
 .code
@@ -83,20 +83,9 @@ main PROC
     push    OFFSET fileBuffer
     push    OFFSET tempArray
     call    ParseTempsFromString
-	; Add Proc calls
 
-    ; **************** TEMPCODE
-    mov esi, OFFSET tempArray            ; ESI points to the start of the array
-    mov ecx, LENGTHOF tempArray; ECX holds the loop counter (number of elements)
-
-print_loop:
-    movsx eax, BYTE PTR [esi]            ; Sign-extend the 1-byte SBYTE into the 32-bit EAX register
-    call  WriteInt                       ; Print the correctly formatted signed integer
-    call  Crlf                            
-
-    add   esi, TYPE tempArray            ; Successfully moves forward by 1 byte
-    loop  print_loop  
-    ; **************** TEMPCODE
+    push	OFFSET tempArray
+	call	WriteTempsReverse
 	
     jmp		_exit
 
@@ -108,82 +97,127 @@ _exit:
 main ENDP
 
 ParseTempsFromString PROC
+    LOCAL   charBuffer[8]:BYTE, negativeFlag:DWORD
+    pushad
+
+    mov     esi, [ebp + 12]     ; ESI = pointer to fileBuffer string
+    mov     edi, [ebp + 8]      ; EDI = pointer to tempArray destination
+    
+    mov     ecx, TEMPS_PER_DAY  ; Counter loop for exactly 24 elements
+
+_collectLoop:
+    ; Set up destination pointer to our local temporary buffer manually without LEA
+    mov     edx, ebp
+    sub     edx, 8              ; EDX = pointer to start of charBuffer local variable
+    
+    push    edi                 ; Save tempArray pointer while we use EDI
+    mov     edi, edx            ; EDI now points to our local charBuffer
+    cld                         ; Clear direction flag for string operations
+
+_readChar:
+    lodsb                       ; Load byte from [ESI] into AL, advances ESI
+    cmp     al, DELIMITER       ; Comma reached?
+    je      _endOfToken
+    cmp     al, 13              ; Carriage Return reached?
+    je      _endOfToken
+    cmp     al, 10              ; Skip line-feeds
+    je      _readChar
+    cmp     al, 0               ; End of file string?
+    je      _endOfToken
+
+    stosb                       ; Store character from AL into local charBuffer
+    jmp     _readChar
+
+_endOfToken:
+    mov     al, 0
+    stosb                       ; Null-terminate our local substring
+
+    ; --- Convert the string chunk inside charBuffer to an Integer ---
+    push    esi                 ; Preserve main file string pointer
+    mov     esi, edx            ; ESI points to the start of charBuffer
+    
+    mov     negativeFlag, 0     ; Reset our local sign tracker
+    mov     ebx, 0              ; EBX will act as our accumulating total
+
+    lodsb                       ; Load first character of the number
+    cmp     al, '-'
+    jne     _calculateDigit
+    mov     negativeFlag, 1     ; Number is negative, toggle flag
+    lodsb                       ; Fetch the next byte (the actual first digit)
+
+_calculateDigit:
+    sub     al, '0'             ; Convert ASCII character to literal value
+    
+    ; Simple multi-digit accumulation without 3-operand instructions
+    ; total = total * 10
+    push    eax                 ; Save our current digit
+    mov     eax, ebx
+    mov     edx, 10
+    imul    edx                 ; EAX = EAX * 10
+    mov     ebx, eax            ; Put total back into EBX
+    pop     eax                 ; Restore our digit
+
+    ; total = total + current_digit
+    mov     edx, 0              ; Clear EDX manually
+    mov     dl, al              ; Safely move byte to register without movzx
+    add     ebx, edx            ; Add digit to running total
+
+    lodsb                       ; Fetch next character
+    cmp     al, 0               ; Process until our null terminator
+    jne     _calculateDigit
+
+    ; Apply negative sign if flag was set
+    cmp     negativeFlag, 1
+    jne     _finishStorage
+    neg     ebx
+
+_finishStorage:
+    pop     esi                 ; Restore fileBuffer source pointer
+    pop     edi                 ; Restore tempArray destination pointer
+    
+    mov     [edi], ebx          ; Store 32-bit SDWORD into array
+    add     edi, TYPE tempArray ; Move to next SDWORD position (adds 4)
+    
+    loop    _collectLoop        ; Loop until all 24 integers are populated
+
+    popad
+    ret     8
+ParseTempsFromString ENDP
+
+WriteTempsReverse PROC
     push    ebp
     mov     ebp, esp
     pushad
 
-    mov     esi, [ebp + 12]     ; esi = pointer to fileBuffer string
-    mov     edi, [ebp + 8]      ; edi = pointer to tempArray destination
+    mov     esi, [ebp + 8]      ; ESI = pointer to start of tempArray
     
-    mov     ecx, 0              ; ecx will act as our running integer total
-    mov     bl, 0               ; bl will track negative flag (0 = positive, 1 = negative)
-    mov     bh, 0               ; bh will track if we processed any digits for this number (0 = no, 1 = yes)
-
-_parseLoop:
-    mov     al, [esi]           ; Grab current character
-    inc     esi                 ; Move pointer forward for next round
+    ; Calculate the memory offset for the last element (index 23):
+    ; Offset = (TEMPS_PER_DAY - 1) * TYPE tempArray = 23 * 4 = 92 bytes
+    mov     eax, TEMPS_PER_DAY
+    dec     eax                 ; EAX = 23
+    mov     ebx, 4              ; Each SDWORD element is 4 bytes
+    mul     ebx                 ; EAX = 23 * 4 = 92
     
-    cmp     al, 0               ; Check for null terminator (end of file string)
-    je      _saveFinal
-    cmp     al, DELIMITER       ; Check for comma
-    je      _saveValue
-    cmp     al, 13              ; Check for Carriage Return (end of line)
-    je      _saveValue
-    cmp     al, 10              ; Check for Line Feed
-    je      _parseLoop          ; Skip line feed, move to next character
+    add     esi, eax            ; ESI now points directly to the last element
+    mov     ecx, TEMPS_PER_DAY  ; Set loop counter to 24
 
-    cmp     al, '+'             ; Is it an explicit plus sign?
-    je      _parseLoop          ; Just skip it and move to the numbers
+_reverseLoop:
+    ; Register Indirect addressing to fetch and print the signed integer
+    mov     eax, [esi]
+    call    WriteInt            ; Prints the signed value
+
+    ; Print the delimiter after the number
+    mDisplayChar DELIMITER      ; Invokes your required I/O macro
+
+    ; Move pointer backward by 1 SDWORD element (4 bytes)
+    sub     esi, 4              
+    loop    _reverseLoop        ; Decrement ECX and repeat until 24 elements are done
+
+    call    Crlf                ; Drop to a new line at the very end of the line output
     
-    cmp     al, '-'             ; Is it a negative sign?
-    jne     _isDigit
-    mov     bl, 1               ; Set negative flag to true
-    jmp     _parseLoop
-
-_isDigit:
-    sub     al, '0'             ; Convert ASCII character to literal integer value
-    movzx   eax, al
-    
-    mov     bh, 1               ; Explicitly flag that we have processed a valid digit
-    ; Multi-digit math: total = (total * 10) + new_digit
-    imul    ecx, ecx, 10
-    add     ecx, eax
-    jmp     _parseLoop
-
-_saveValue:
-    ; If we haven't seen any actual digits yet, don't save anything
-    cmp     bh, 0
-    je      _resetFlags
-
-    ; Check if negative flag was set
-    cmp     bl, 1
-    jne     _store
-    neg     ecx                 ; Negate the value if it was marked negative
-
-_store:
-    mov     [edi], cl           ; Store the lower byte into tempArray
-    inc     edi                 ; Move to next byte slot in array
-
-_resetFlags:
-    mov     ecx, 0              ; Reset total accumulator
-    mov     bl, 0               ; Reset negative flag
-    mov     bh, 0               ; Reset digit validation tracker
-    jmp     _parseLoop
-
-_saveFinal:
-    ; Catch any trailing numbers that didn't end with a delimiter
-    cmp     bh, 0
-    je      _done
-    cmp     bl, 1
-    jne     _storeFinal
-    neg     ecx
-_storeFinal:
-    mov     [edi], cl
-
-_done:
     popad
     pop     ebp
-    ret     8
-ParseTempsFromString ENDP
+    ret     4                   ; Clean up the single 4-byte stack parameter
+WriteTempsReverse ENDP
 
 END main

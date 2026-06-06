@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 11:56:15
 5Thermometer Readings Program     (Proj6_guardadd.asm	     Page 1 - 1
 
 
@@ -135,10 +135,10 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
  0000013D  00001000 [			fileBuffer		BYTE	BUFFER_SIZE		DUP(?)
 	    00
 	   ]
- 0000113D  00000018 [			tempArray		SBYTE	TEMPS_PER_DAY	DUP(?)
-	    00
+ 0000113D  00000018 [			tempArray       SDWORD  TEMPS_PER_DAY   DUP(?)
+	    00000000
 	   ]
- 00001155 00000000			fileHandle		DWORD	?
+ 0000119D 00000000			fileHandle		DWORD	?
 
  00000000			.code
  00000000			main PROC
@@ -160,130 +160,177 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
 
  0000002E  BA 00000119 R		mov		edx, OFFSET fileName
  00000033  E8 00000000 E		call	OpenInputFile
- 00000038  A3 00001155 R		mov		fileHandle, eax
+ 00000038  A3 0000119D R		mov		fileHandle, eax
 
  0000003D  83 F8 FF			cmp		eax, INVALID_HANDLE_VALUE
- 00000040  74 4B			je		_invalidFile
+ 00000040  74 39			je		_invalidFile
 					
- 00000042  A1 00001155 R		mov		eax, fileHandle
+ 00000042  A1 0000119D R		mov		eax, fileHandle
  00000047  BA 0000013D R	    mov		edx, OFFSET fileBuffer
  0000004C  B9 00001000		    mov		ecx, BUFFER_SIZE
  00000051  E8 00000000 E	    call	ReadFromFile
- 00000056  A1 00001155 R		mov		eax, fileHandle
+ 00000056  A1 0000119D R		mov		eax, fileHandle
  0000005B  E8 00000000 E	    call	CloseFile
 
- 00000060  68 0000013D R	    PUSH    OFFSET fileBuffer
- 00000065  68 0000113D R	    PUSH    OFFSET tempArray
- 0000006A  E8 00000031		    CALL    ParseTempsFromString
-					; Add Proc calls
+ 00000060  68 0000013D R	    push    OFFSET fileBuffer
+ 00000065  68 0000113D R	    push    OFFSET tempArray
+ 0000006A  E8 0000001F		    call    ParseTempsFromString
 
- 0000006F  BE 0000113D R	    mov esi, OFFSET tempArray            ; ESI points to the start of the array
- 00000074  B9 00000018		    mov ecx, LENGTHOF tempArray; ECX holds the loop counter (number of elements)
-
- 00000079			print_loop:
- 00000079  0F BE 06		    movsx eax, BYTE PTR [esi]            ; Sign-extend the 1-byte SBYTE into the 32-bit EAX register
- 0000007C  E8 00000000 E	    call  WriteInt                       ; Print the correctly formatted signed integer
- 00000081  E8 00000000 E	    call  Crlf                            
-
- 00000086  83 C6 01		    add   esi, TYPE tempArray            ; Successfully moves forward by 1 byte
- 00000089  E2 EE		    loop  print_loop  
+ 0000006F  68 0000113D R	    push	OFFSET tempArray
+ 00000074  E8 00000096			call	WriteTempsReverse
 					
- 0000008B  EB 0C		    jmp		_exit
+ 00000079  EB 0C		    jmp		_exit
 
- 0000008D			_invalidFile:
+ 0000007B			_invalidFile:
 					mDisplayString		OFFSET fileErrorMsg
- 0000008D  52		     1		push	edx
- 0000008E  BA 00000102 R     1		mov		edx, OFFSET fileErrorMsg
- 00000093  E8 00000000 E     1		call	WriteString
- 00000098  5A		     1		pop		edx
+ 0000007B  52		     1		push	edx
+ 0000007C  BA 00000102 R     1		mov		edx, OFFSET fileErrorMsg
+ 00000081  E8 00000000 E     1		call	WriteString
+ 00000086  5A		     1		pop		edx
 
- 00000099			_exit:
+ 00000087			_exit:
 					Invoke ExitProcess,0
- 00000099  6A 00	   *	    push   +000000000h
- 0000009B  E8 00000000 E   *	    call   ExitProcess
- 000000A0			main ENDP
+ 00000087  6A 00	   *	    push   +000000000h
+ 00000089  E8 00000000 E   *	    call   ExitProcess
+ 0000008E			main ENDP
 
- 000000A0			ParseTempsFromString PROC
- 000000A0  55			    push    ebp
- 000000A1  8B EC		    mov     ebp, esp
- 000000A3  60			    pushad
+ 0000008E			ParseTempsFromString PROC
+				    LOCAL   charBuffer[8]:BYTE, negativeFlag:DWORD
+ 0000008E  55		   *	    push   ebp
+ 0000008F  8B EC	   *	    mov    ebp, esp
+ 00000091  83 C4 F4	   *	    add    esp, 0FFFFFFF4h
+ 00000094  60			    pushad
 
- 000000A4  8B 75 0C		    mov     esi, [ebp + 12]     ; esi = pointer to fileBuffer string
- 000000A7  8B 7D 08		    mov     edi, [ebp + 8]      ; edi = pointer to tempArray destination
+ 00000095  8B 75 0C		    mov     esi, [ebp + 12]     ; ESI = pointer to fileBuffer string
+ 00000098  8B 7D 08		    mov     edi, [ebp + 8]      ; EDI = pointer to tempArray destination
 				    
- 000000AA  B9 00000000		    mov     ecx, 0              ; ecx will act as our running integer total
- 000000AF  B3 00		    mov     bl, 0               ; bl will track negative flag (0 = positive, 1 = negative)
- 000000B1  B7 00		    mov     bh, 0               ; bh will track if we processed any digits for this number (0 = no, 1 = yes)
+ 0000009B  B9 00000018		    mov     ecx, TEMPS_PER_DAY  ; Counter loop for exactly 24 elements
 
- 000000B3			_parseLoop:
- 000000B3  8A 06		    mov     al, [esi]           ; Grab current character
- 000000B5  46			    inc     esi                 ; Move pointer forward for next round
+ 000000A0			_collectLoop:
+				    ; Set up destination pointer to our local temporary buffer manually without LEA
+ 000000A0  8B D5		    mov     edx, ebp
+ 000000A2  83 EA 08		    sub     edx, 8              ; EDX = pointer to start of charBuffer local variable
 				    
- 000000B6  3C 00		    cmp     al, 0               ; Check for null terminator (end of file string)
- 000000B8  74 40		    je      _saveFinal
- 000000BA  3C 2C		    cmp     al, DELIMITER       ; Check for comma
- 000000BC  74 22		    je      _saveValue
- 000000BE  3C 0D		    cmp     al, 13              ; Check for Carriage Return (end of line)
- 000000C0  74 1E		    je      _saveValue
- 000000C2  3C 0A		    cmp     al, 10              ; Check for Line Feed
- 000000C4  74 ED		    je      _parseLoop          ; Skip line feed, move to next character
+ 000000A5  57			    push    edi                 ; Save tempArray pointer while we use EDI
+ 000000A6  8B FA		    mov     edi, edx            ; EDI now points to our local charBuffer
+ 000000A8  FC			    cld                         ; Clear direction flag for string operations
 
- 000000C6  3C 2B		    cmp     al, '+'             ; Is it an explicit plus sign?
- 000000C8  74 E9		    je      _parseLoop          ; Just skip it and move to the numbers
+ 000000A9			_readChar:
+ 000000A9  AC			    lodsb                       ; Load byte from [ESI] into AL, advances ESI
+ 000000AA  3C 2C		    cmp     al, DELIMITER       ; Comma reached?
+ 000000AC  74 0F		    je      _endOfToken
+ 000000AE  3C 0D		    cmp     al, 13              ; Carriage Return reached?
+ 000000B0  74 0B		    je      _endOfToken
+ 000000B2  3C 0A		    cmp     al, 10              ; Skip line-feeds
+ 000000B4  74 F3		    je      _readChar
+ 000000B6  3C 00		    cmp     al, 0               ; End of file string?
+ 000000B8  74 03		    je      _endOfToken
+
+ 000000BA  AA			    stosb                       ; Store character from AL into local charBuffer
+ 000000BB  EB EC		    jmp     _readChar
+
+ 000000BD			_endOfToken:
+ 000000BD  B0 00		    mov     al, 0
+ 000000BF  AA			    stosb                       ; Null-terminate our local substring
+
+				    ; --- Convert the string chunk inside charBuffer to an Integer ---
+ 000000C0  56			    push    esi                 ; Preserve main file string pointer
+ 000000C1  8B F2		    mov     esi, edx            ; ESI points to the start of charBuffer
 				    
- 000000CA  3C 2D		    cmp     al, '-'             ; Is it a negative sign?
- 000000CC  75 04		    jne     _isDigit
- 000000CE  B3 01		    mov     bl, 1               ; Set negative flag to true
- 000000D0  EB E1		    jmp     _parseLoop
+ 000000C3  C7 45 F4		    mov     negativeFlag, 0     ; Reset our local sign tracker
+	   00000000
+ 000000CA  BB 00000000		    mov     ebx, 0              ; EBX will act as our accumulating total
 
- 000000D2			_isDigit:
- 000000D2  2C 30		    sub     al, '0'             ; Convert ASCII character to literal integer value
- 000000D4  0F B6 C0		    movzx   eax, al
+ 000000CF  AC			    lodsb                       ; Load first character of the number
+ 000000D0  3C 2D		    cmp     al, '-'
+ 000000D2  75 08		    jne     _calculateDigit
+ 000000D4  C7 45 F4		    mov     negativeFlag, 1     ; Number is negative, toggle flag
+	   00000001
+ 000000DB  AC			    lodsb                       ; Fetch the next byte (the actual first digit)
+
+ 000000DC			_calculateDigit:
+ 000000DC  2C 30		    sub     al, '0'             ; Convert ASCII character to literal value
 				    
- 000000D7  B7 01		    mov     bh, 1               ; Explicitly flag that we have processed a valid digit
-				    ; Multi-digit math: total = (total * 10) + new_digit
- 000000D9  6B C9 0A		    imul    ecx, ecx, 10
- 000000DC  03 C8		    add     ecx, eax
- 000000DE  EB D3		    jmp     _parseLoop
+				    ; Simple multi-digit accumulation without 3-operand instructions
+				    ; total = total * 10
+ 000000DE  50			    push    eax                 ; Save our current digit
+ 000000DF  8B C3		    mov     eax, ebx
+ 000000E1  BA 0000000A		    mov     edx, 10
+ 000000E6  F7 EA		    imul    edx                 ; EAX = EAX * 10
+ 000000E8  8B D8		    mov     ebx, eax            ; Put total back into EBX
+ 000000EA  58			    pop     eax                 ; Restore our digit
 
- 000000E0			_saveValue:
-				    ; If we haven't seen any actual digits yet, don't save anything
- 000000E0  80 FF 00		    cmp     bh, 0
- 000000E3  74 0A		    je      _resetFlags
+				    ; total = total + current_digit
+ 000000EB  BA 00000000		    mov     edx, 0              ; Clear EDX manually
+ 000000F0  8A D0		    mov     dl, al              ; Safely move byte to register without movzx
+ 000000F2  03 DA		    add     ebx, edx            ; Add digit to running total
 
-				    ; Check if negative flag was set
- 000000E5  80 FB 01		    cmp     bl, 1
- 000000E8  75 02		    jne     _store
- 000000EA  F7 D9		    neg     ecx                 ; Negate the value if it was marked negative
+ 000000F4  AC			    lodsb                       ; Fetch next character
+ 000000F5  3C 00		    cmp     al, 0               ; Process until our null terminator
+ 000000F7  75 E3		    jne     _calculateDigit
 
- 000000EC			_store:
- 000000EC  88 0F		    mov     [edi], cl           ; Store the lower byte into tempArray
- 000000EE  47			    inc     edi                 ; Move to next byte slot in array
+				    ; Apply negative sign if flag was set
+ 000000F9  83 7D F4 01		    cmp     negativeFlag, 1
+ 000000FD  75 02		    jne     _finishStorage
+ 000000FF  F7 DB		    neg     ebx
 
- 000000EF			_resetFlags:
- 000000EF  B9 00000000		    mov     ecx, 0              ; Reset total accumulator
- 000000F4  B3 00		    mov     bl, 0               ; Reset negative flag
- 000000F6  B7 00		    mov     bh, 0               ; Reset digit validation tracker
- 000000F8  EB B9		    jmp     _parseLoop
+ 00000101			_finishStorage:
+ 00000101  5E			    pop     esi                 ; Restore fileBuffer source pointer
+ 00000102  5F			    pop     edi                 ; Restore tempArray destination pointer
+				    
+ 00000103  89 1F		    mov     [edi], ebx          ; Store 32-bit SDWORD into array
+ 00000105  83 C7 04		    add     edi, TYPE tempArray ; Move to next SDWORD position (adds 4)
+				    
+ 00000108  E2 96		    loop    _collectLoop        ; Loop until all 24 integers are populated
 
- 000000FA			_saveFinal:
-				    ; Catch any trailing numbers that didn't end with a delimiter
- 000000FA  80 FF 00		    cmp     bh, 0
- 000000FD  74 09		    je      _done
- 000000FF  80 FB 01		    cmp     bl, 1
- 00000102  75 02		    jne     _storeFinal
- 00000104  F7 D9		    neg     ecx
- 00000106			_storeFinal:
- 00000106  88 0F		    mov     [edi], cl
+ 0000010A  61			    popad
+ 0000010B  C9		   *	    leave  
+ 0000010C  C2 0008		    ret     8
+ 0000010F			ParseTempsFromString ENDP
+Proj6_guardadd.asm(185) : warning A6004:procedure argument or local not referenced : charBuffer
 
- 00000108			_done:
- 00000108  61			    popad
- 00000109  5D			    pop     ebp
- 0000010A  C2 0008		    ret     8
- 0000010D			ParseTempsFromString ENDP
+ 0000010F			WriteTempsReverse PROC
+ 0000010F  55			    push    ebp
+ 00000110  8B EC		    mov     ebp, esp
+ 00000112  60			    pushad
+
+ 00000113  8B 75 08		    mov     esi, [ebp + 8]      ; ESI = pointer to start of tempArray
+				    
+				    ; Calculate the memory offset for the last element (index 23):
+				    ; Offset = (TEMPS_PER_DAY - 1) * TYPE tempArray = 23 * 4 = 92 bytes
+ 00000116  B8 00000018		    mov     eax, TEMPS_PER_DAY
+ 0000011B  48			    dec     eax                 ; EAX = 23
+ 0000011C  BB 00000004		    mov     ebx, 4              ; Each SDWORD element is 4 bytes
+ 00000121  F7 E3		    mul     ebx                 ; EAX = 23 * 4 = 92
+				    
+ 00000123  03 F0		    add     esi, eax            ; ESI now points directly to the last element
+ 00000125  B9 00000018		    mov     ecx, TEMPS_PER_DAY  ; Set loop counter to 24
+
+ 0000012A			_reverseLoop:
+				    ; Register Indirect addressing to fetch and print the signed integer
+ 0000012A  8B 06		    mov     eax, [esi]
+ 0000012C  E8 00000000 E	    call    WriteInt            ; Prints the signed value
+
+				    ; Print the delimiter after the number
+				    mDisplayChar DELIMITER      ; Invokes your required I/O macro
+ 00000131  50		     1	    push	eax
+ 00000132  B0 2C	     1	    mov		al, DELIMITER
+ 00000134  E8 00000000 E     1	    call	WriteChar
+ 00000139  58		     1	    pop		eax
+
+				    ; Move pointer backward by 1 SDWORD element (4 bytes)
+ 0000013A  83 EE 04		    sub     esi, 4              
+ 0000013D  E2 EB		    loop    _reverseLoop        ; Decrement ECX and repeat until 24 elements are done
+
+ 0000013F  E8 00000000 E	    call    Crlf                ; Drop to a new line at the very end of the line output
+				    
+ 00000144  61			    popad
+ 00000145  5D			    pop     ebp
+ 00000146  C2 0004		    ret     4                   ; Clean up the single 4-byte stack parameter
+ 00000149			WriteTempsReverse ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 09:06:26
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/06/26 11:56:15
 5Thermometer Readings Program     (Proj6_guardadd.asm	     Symbols 2 - 1
 
 
@@ -386,8 +433,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00001159 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000010D Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000011A1 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 00000149 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -441,15 +488,14 @@ MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ParseDecimal32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ParseInteger32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-ParseTempsFromString . . . . . .	P Near	 000000A0 _TEXT	Length= 0000006D Public STDCALL
-  _parseLoop . . . . . . . . . .	L Near	 000000B3 _TEXT	
-  _isDigit . . . . . . . . . . .	L Near	 000000D2 _TEXT	
-  _saveValue . . . . . . . . . .	L Near	 000000E0 _TEXT	
-  _store . . . . . . . . . . . .	L Near	 000000EC _TEXT	
-  _resetFlags  . . . . . . . . .	L Near	 000000EF _TEXT	
-  _saveFinal . . . . . . . . . .	L Near	 000000FA _TEXT	
-  _storeFinal  . . . . . . . . .	L Near	 00000106 _TEXT	
-  _done  . . . . . . . . . . . .	L Near	 00000108 _TEXT	
+ParseTempsFromString . . . . . .	P Near	 0000008E _TEXT	Length= 00000081 Public STDCALL
+  charBuffer . . . . . . . . . .	Byte	 bp - 00000008
+  negativeFlag . . . . . . . . .	DWord	 bp - 0000000C
+  _collectLoop . . . . . . . . .	L Near	 000000A0 _TEXT	
+  _readChar  . . . . . . . . . .	L Near	 000000A9 _TEXT	
+  _endOfToken  . . . . . . . . .	L Near	 000000BD _TEXT	
+  _calculateDigit  . . . . . . .	L Near	 000000DC _TEXT	
+  _finishStorage . . . . . . . .	L Near	 00000101 _TEXT	
 PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -501,12 +547,13 @@ WriteInt . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteTempsReverse  . . . . . . .	P Near	 0000010F _TEXT	Length= 0000003A Public STDCALL
+  _reverseLoop . . . . . . . . .	L Near	 0000012A _TEXT	
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000A0 Public STDCALL
-  print_loop . . . . . . . . . .	L Near	 00000079 _TEXT	
-  _invalidFile . . . . . . . . .	L Near	 0000008D _TEXT	
-  _exit  . . . . . . . . . . . .	L Near	 00000099 _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000008E Public STDCALL
+  _invalidFile . . . . . . . . .	L Near	 0000007B _TEXT	
+  _exit  . . . . . . . . . . . .	L Near	 00000087 _TEXT	
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -737,7 +784,7 @@ cyan . . . . . . . . . . . . . .	Number	 00000003h
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
 fileBuffer . . . . . . . . . . .	Byte	 0000013D _DATA	
 fileErrorMsg . . . . . . . . . .	Byte	 00000102 _DATA	
-fileHandle . . . . . . . . . . .	DWord	 00001155 _DATA	
+fileHandle . . . . . . . . . . .	DWord	 0000119D _DATA	
 fileNamePrompt . . . . . . . . .	Byte	 000000DA _DATA	
 fileName . . . . . . . . . . . .	Byte	 00000119 _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
@@ -751,10 +798,10 @@ lightMagenta . . . . . . . . . .	Number	 0000000Dh
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-tempArray  . . . . . . . . . . .	Byte	 0000113D _DATA	
+tempArray  . . . . . . . . . . .	DWord	 0000113D _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
 
-	   0 Warnings
+	   1 Warnings
 	   0 Errors
