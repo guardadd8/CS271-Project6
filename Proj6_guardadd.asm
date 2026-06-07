@@ -16,8 +16,6 @@ INCLUDE Irvine32.inc
 ;
 ; Displays a prompt and reads a string of characters.
 ;
-; Preconditions: Do not use EDX or ECX as arguments.
-;
 ; Receives:
 ;   fileNamePromptRef   = address of text prompt to display
 ;   fileNameRef         = address of byte array to store input in
@@ -38,6 +36,7 @@ mGetString MACRO fileNamePromptRef:req, fileNameRef:req, maxChars:req, bytesRead
 	call	ReadString
 	mov		edx, bytesReadRef
 	mov		[edx], eax
+    call    CrLf
 
 	popad
 ENDM
@@ -84,12 +83,12 @@ TEMPS_PER_DAY	= 24
 DELIMITER		= ','
 
 .data
-
 	introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a comma-delimited file",13,10
 					BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values properly",13,10
 					BYTE	"and print the values in reverse order.",13,10,0
 	fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
 	fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
+    correctTempMsg  BYTE    "Correct temperature order:",13,10,0
     farewellMsg     BYTE    "Goodbye.",0
 
 	fileName        BYTE    MAX_CHARS       DUP(?)  ; File name buffer for user string input
@@ -129,6 +128,9 @@ _fileValid:
     push            OFFSET fileBuffer
     push            OFFSET tempArray
     call            ParseTempsFromString
+
+    ; Display correct temperatures message.
+    mDisplayString  OFFSET correctTempMsg
 
     ; Print converted signed array items in reverse order.
     push            OFFSET tempArray
@@ -179,17 +181,17 @@ _readChar:
     ; Check if comma, carriage return, line-feed, or end of string is reached and properly deal with them.
     lodsb                       
     cmp     al, DELIMITER       ; Check if comma reached
-    je      _endOfToken
+    je      _elementEnd
     cmp     al, 13              ; Check for carriage return
-    je      _endOfToken
+    je      _elementEnd
     cmp     al, 10              ; Check and skip line-feeds
     je      _readChar
     cmp     al, 0               ; Check if end of string
-    je      _endOfToken
+    je      _elementEnd
     stosb                       ; Store AL character in charBuffer
     jmp     _readChar
 
-_endOfToken:
+_elementEnd:
     mov     al, 0
     stosb                       ; Null-terminate substring
 
@@ -235,7 +237,7 @@ _storeElement:
     pop     edi                 ; Restore tempArray pointer
     
     mov     [edi], ebx          ; Store signed value into array
-    add     edi, TYPE tempArray ; Move to next tempArray position
+    add     edi, 4              ; Move to next tempArray position
     
     loop    _collectLoop
 
