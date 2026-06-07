@@ -68,7 +68,7 @@ ENDM
 ; Displays a single ASCII character to the console.
 ;
 ; Receives:
-;   charVal     = ASCII character (literal/constant)
+;   charVal = ASCII character (literal/constant)
 ; ----------------------------------------------------
 mDisplayChar MACRO charVal:req
     push	eax
@@ -143,89 +143,102 @@ _exit:
     Invoke  ExitProcess,0
 main ENDP
 
+; ---------------------------------------------------------------------------------
+; Name: ParseTempsFromString
+;
+; Parses ASCII data string from a text file buffer, extracts numerical 
+; digit characters separated by delimiters, and converts them into signed
+; integers stored sequentially within destination array.
+;
+; Preconditions:    fileBuffer must contain valid null-terminated string of data.
+;                   tempArray must hold at least TEMPS_PER_DAY elements.
+;
+; Receives:
+;   [ebp + 12] = address of text-contents buffer
+;   [ebp + 8]  = address of destination array
+;
+; Returns:
+;   tempArray  = holds converted signed integer values
+; ---------------------------------------------------------------------------------
 ParseTempsFromString PROC
     LOCAL   charBuffer[8]:BYTE, negativeFlag:DWORD
     pushad
 
-    mov     esi, [ebp + 12]     ; fileBuffer string pointer
-    mov     edi, [ebp + 8]      ; tempArray destination pointer
-    
-    mov     ecx, TEMPS_PER_DAY
+    mov     esi, [ebp + 12]     ; fileBuffer
+    mov     edi, [ebp + 8]      ; tempArray
+    mov     ecx, TEMPS_PER_DAY  
 
 _collectLoop:
-    ; Set up destination pointer to our local temporary buffer manually without LEA
+    ; Set pointer to charBuffer. 
     mov     edx, ebp
-    sub     edx, 8              ; EDX = pointer to start of charBuffer local variable
-    
-    push    edi                 ; Save tempArray pointer while we use EDI
-    mov     edi, edx            ; EDI now points to our local charBuffer
-    cld                         ; Clear direction flag for string operations
+    sub     edx, 8              ; Point to charBuffer
+    push    edi                 ; Preserve tempArray pointer and point EDI to charBuffer
+    mov     edi, edx            
+    cld                         
 
 _readChar:
-    lodsb                       ; Load byte from [ESI] into AL, advances ESI
-    cmp     al, DELIMITER       ; Comma reached?
+    ; Check if comma, carriage return, line-feed, or end of string is reached and properly deal with them.
+    lodsb                       
+    cmp     al, DELIMITER       ; Check if comma reached
     je      _endOfToken
-    cmp     al, 13              ; Carriage Return reached?
+    cmp     al, 13              ; Check for carriage return
     je      _endOfToken
-    cmp     al, 10              ; Skip line-feeds
+    cmp     al, 10              ; Check and skip line-feeds
     je      _readChar
-    cmp     al, 0               ; End of file string?
+    cmp     al, 0               ; Check if end of string
     je      _endOfToken
-
-    stosb                       ; Store character from AL into local charBuffer
+    stosb                       ; Store AL character in charBuffer
     jmp     _readChar
 
 _endOfToken:
     mov     al, 0
-    stosb                       ; Null-terminate our local substring
+    stosb                       ; Null-terminate substring
 
-    ; --- Convert the string chunk inside charBuffer to an Integer ---
-    push    esi                 ; Preserve main file string pointer
-    mov     esi, edx            ; ESI points to the start of charBuffer
+    ; Convert substring in charBuffer to integer
+    push    esi                 
+    mov     esi, edx            ; Point ESI to charBuffer
     
-    mov     negativeFlag, 0     ; Reset our local sign tracker
-    mov     ebx, 0              ; EBX will act as our accumulating total
+    mov     negativeFlag, 0     ; Reset local sign tracker
+    mov     ebx, 0              ; Accumulator
 
-    lodsb                       ; Load first character of the number
+    lodsb                       
     cmp     al, '-'
     jne     _calculateDigit
-    mov     negativeFlag, 1     ; Number is negative, toggle flag
-    lodsb                       ; Fetch the next byte (the actual first digit)
+    mov     negativeFlag, 1     ; Toggle flag if negative number
+    lodsb                       ; Get first digit in substring
 
 _calculateDigit:
     sub     al, '0'             ; Convert ASCII character to literal value
     
-    ; Simple multi-digit accumulation without 3-operand instructions
-    ; total = total * 10
-    push    eax                 ; Save our current digit
+    ; Perform multi-digit accumulation, total = (total * 10) + current_digit
+    push    eax                 
     mov     eax, ebx
     mov     edx, 10
-    imul    edx                 ; EAX = EAX * 10
-    mov     ebx, eax            ; Put total back into EBX
-    pop     eax                 ; Restore our digit
+    imul    edx                 
+    mov     ebx, eax            
+    pop     eax                 
 
-    ; total = total + current_digit
-    mov     edx, 0              ; Clear EDX manually
-    mov     dl, al              ; Safely move byte to register without movzx
-    add     ebx, edx            ; Add digit to running total
+    mov     edx, 0              
+    mov     dl, al              ; Move byte to sub-register
+    add     ebx, edx            ; Add digit to current total
 
-    lodsb                       ; Fetch next character
-    cmp     al, 0               ; Process until our null terminator
+    lodsb                       
+    cmp     al, 0               ; Process until null terminator
     jne     _calculateDigit
 
-    ; Apply negative sign if flag was set
+    ; Apply negative sign if set flag
     cmp     negativeFlag, 1
     jne     _finishStorage
     neg     ebx
 
 _finishStorage:
-    pop     esi                 ; Restore fileBuffer source pointer
-    pop     edi                 ; Restore tempArray destination pointer
+    pop     esi                 ; Restore fileBuffer pointer
+    pop     edi                 ; Restore tempArray pointer
     
-    mov     [edi], ebx          ; Store 32-bit SDWORD into array
-    add     edi, TYPE tempArray ; Move to next SDWORD position (adds 4)
+    mov     [edi], ebx          ; Store signed value into array
+    add     edi, TYPE tempArray ; Move to next tempArray position
     
-    loop    _collectLoop        ; Loop until all 24 integers are populated
+    loop    _collectLoop
 
     popad
     ret     8
