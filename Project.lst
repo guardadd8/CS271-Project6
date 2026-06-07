@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 10:21:34
 3Temperature Reader Program     (Proj6_guardadd.asm	     Page 1 - 1
 
 
@@ -10,7 +10,7 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
 				; Course number/section:   CS271 Section 400
 				; Project Number: 6               Due Date: 6/7/2026
 				; Description:  This programs asks the user to enter the name of a file that will contain 
-				;               comma-delimited temperature values. The program will then open the file, 
+				;               delimited temperature values. The program will then open the file, 
 				;               read the temperatures, and print the signed values in reverse order.
 
 				INCLUDE Irvine32.inc
@@ -104,7 +104,7 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
  = 0000002C			DELIMITER		= ','
 
  00000000			.data
- 00000000 57 65 6C 63 6F		introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a comma-delimited file",13,10
+ 00000000 57 65 6C 63 6F		introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a file containing delimited temperature",13,10
 	   6D 65 20 74 6F
 	   20 74 68 65 20
 	   54 65 6D 70 65
@@ -117,39 +117,35 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
 	   6F 67 72 61 6D
 	   20 77 69 6C 6C
 	   20 72 65 61 64
-	   20 61 20 63 6F
-	   6D 6D 61 2D 64
+	   20 61 20 66 69
+	   6C 65 20 63 6F
+	   6E 74 61 69 6E
+	   69 6E 67 20 64
 	   65 6C 69 6D 69
-	   74 65 64 20 66
-	   69 6C 65 0D 0A
- 0000005A  74 68 61 74 20						BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values properly",13,10
-	   6D 75 73 74 20
-	   62 65 20 41 53
-	   43 49 49 2D 66
-	   6F 72 6D 61 74
-	   74 65 64 2E 20
-	   49 74 20 77 69
-	   6C 6C 20 72 65
-	   74 72 69 65 76
-	   65 20 74 68 65
-	   20 73 74 6F 72
-	   65 64 20 74 65
-	   6D 70 65 72 61
-	   74 75 72 65 20
-	   76 61 6C 75 65
-	   73 20 70 72 6F
-	   70 65 72 6C 79
+	   74 65 64 20 74
+	   65 6D 70 65 72
+	   61 74 75 72 65
 	   0D 0A
- 000000B1  61 6E 64 20 70						BYTE	"and print the values in reverse order.",13,10,0
-	   72 69 6E 74 20
-	   74 68 65 20 76
-	   61 6C 75 65 73
-	   20 69 6E 20 72
-	   65 76 65 72 73
-	   65 20 6F 72 64
-	   65 72 2E 0D 0A
-	   00
- 000000DA 45 6E 74 65 72		fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
+ 0000006B  76 61 6C 75 65						BYTE	"values. It will then interpret the temperatures correctly and print them in reverse order.",13,10, 0					
+	   73 2E 20 49 74
+	   20 77 69 6C 6C
+	   20 74 68 65 6E
+	   20 69 6E 74 65
+	   72 70 72 65 74
+	   20 74 68 65 20
+	   74 65 6D 70 65
+	   72 61 74 75 72
+	   65 73 20 63 6F
+	   72 72 65 63 74
+	   6C 79 20 61 6E
+	   64 20 70 72 69
+	   6E 74 20 74 68
+	   65 6D 20 69 6E
+	   20 72 65 76 65
+	   72 73 65 20 6F
+	   72 64 65 72 2E
+	   0D 0A 00
+ 000000C8 45 6E 74 65 72		fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
 	   20 74 68 65 20
 	   6E 61 6D 65 20
 	   6F 66 20 74 68
@@ -157,31 +153,31 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
 	   65 20 74 6F 20
 	   62 65 20 72 65
 	   61 64 3A 20 00
- 00000102 49 6E 63 6F 72		fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
+ 000000F0 49 6E 63 6F 72		fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
 	   72 65 63 74 20
 	   66 69 6C 65 20
 	   6E 61 6D 65 2E
 	   0D 0A 00
- 00000119 43 6F 72 72 65	    correctTempMsg  BYTE    "Correct temperature order:",13,10,0
+ 00000107 43 6F 72 72 65	    correctTempMsg  BYTE    "Correct temperature order:",13,10,0
 	   63 74 20 74 65
 	   6D 70 65 72 61
 	   74 75 72 65 20
 	   6F 72 64 65 72
 	   3A 0D 0A 00
- 00000136 47 6F 6F 64 62	    farewellMsg     BYTE    "Goodbye.",0
+ 00000124 47 6F 6F 64 62	    farewellMsg     BYTE    "Goodbye.",0
 	   79 65 2E 00
 
- 0000013F  00000020 [			fileName        BYTE    MAX_CHARS       DUP(?)  ; File name buffer for user string input
+ 0000012D  00000020 [			fileName        BYTE    MAX_CHARS       DUP(?)  ; File name buffer for user string input
 	    00
 	   ]
- 0000015F 00000000		    bytesRead       DWORD   ?                       ; Length of user string input
- 00000163  00001000 [		    fileBuffer      BYTE    BUFFER_SIZE     DUP(?)  ; Buffer for raw text contents from file
+ 0000014D 00000000		    bytesRead       DWORD   ?                       ; Length of user string input
+ 00000151  00001000 [		    fileBuffer      BYTE    BUFFER_SIZE     DUP(?)  ; Buffer for raw text contents from file
 	    00
 	   ]
- 00001163  00000018 [		    tempArray       SDWORD  TEMPS_PER_DAY   DUP(?)  ; Array for storing converted signed integers
+ 00001151  00000018 [		    tempArray       SDWORD  TEMPS_PER_DAY   DUP(?)  ; Array for storing converted signed integers
 	    00000000
 	   ]
- 000011C3 00000000		    fileHandle      DWORD   ?                       ; System handle variable for the opened file
+ 000011B1 00000000		    fileHandle      DWORD   ?                       ; System handle variable for the opened file
 
  00000000			.code
  00000000			main PROC
@@ -196,59 +192,59 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
 				    ; Get user filename, attempt to open file.
 				    mGetString      OFFSET fileNamePrompt, OFFSET fileName, MAX_CHARS, OFFSET bytesRead
  0000000C  60		     1		pushad
- 0000000D  BA 000000DA R     1		mov		edx, OFFSET fileNamePrompt
+ 0000000D  BA 000000C8 R     1		mov		edx, OFFSET fileNamePrompt
  00000012  E8 00000000 E     1		call	WriteString
- 00000017  BA 0000013F R     1		mov		edx, OFFSET fileName
+ 00000017  BA 0000012D R     1		mov		edx, OFFSET fileName
  0000001C  B9 00000020	     1		mov		ecx, MAX_CHARS
  00000021  E8 00000000 E     1		call	ReadString
- 00000026  BA 0000015F R     1		mov		edx, OFFSET bytesRead
+ 00000026  BA 0000014D R     1		mov		edx, OFFSET bytesRead
  0000002B  89 02	     1		mov		[edx], eax
  0000002D  E8 00000000 E     1	    call    CrLf
  00000032  61		     1		popad
- 00000033  BA 0000013F R	    mov             edx, OFFSET fileName
+ 00000033  BA 0000012D R	    mov             edx, OFFSET fileName
  00000038  E8 00000000 E	    call            OpenInputFile
- 0000003D  A3 000011C3 R	    mov             fileHandle, eax
+ 0000003D  A3 000011B1 R	    mov             fileHandle, eax
 
 				    ; Check file handle. If negative, throw error message and reprompt.
  00000042  83 F8 FF		    cmp             eax, INVALID_HANDLE_VALUE
  00000045  75 0E		    jne             _fileValid
 				    mDisplayString  OFFSET fileErrorMsg
  00000047  52		     1		push	edx
- 00000048  BA 00000102 R     1		mov		edx, OFFSET fileErrorMsg
+ 00000048  BA 000000F0 R     1		mov		edx, OFFSET fileErrorMsg
  0000004D  E8 00000000 E     1		call	WriteString
  00000052  5A		     1		pop		edx
  00000053  EB B7		    jmp             _promptUser
 
  00000055			_fileValid:
 				    ; Read and store text data stream into fileBuffer. Close file stream after finished.
- 00000055  A1 000011C3 R	    mov             eax, fileHandle
- 0000005A  BA 00000163 R	    mov             edx, OFFSET fileBuffer
+ 00000055  A1 000011B1 R	    mov             eax, fileHandle
+ 0000005A  BA 00000151 R	    mov             edx, OFFSET fileBuffer
  0000005F  B9 00001000		    mov             ecx, BUFFER_SIZE
  00000064  E8 00000000 E	    call            ReadFromFile
- 00000069  A1 000011C3 R	    mov             eax, fileHandle
+ 00000069  A1 000011B1 R	    mov             eax, fileHandle
  0000006E  E8 00000000 E	    call            CloseFile
 
 				    ; Convert fileBuffer content into formatted SDWORD values.
- 00000073  68 00000163 R	    push            OFFSET fileBuffer
- 00000078  68 00001163 R	    push            OFFSET tempArray
+ 00000073  68 00000151 R	    push            OFFSET fileBuffer
+ 00000078  68 00001151 R	    push            OFFSET tempArray
  0000007D  E8 0000002E		    call            ParseTempsFromString
 
 				    ; Display correct temperatures message.
 				    mDisplayString  OFFSET correctTempMsg
  00000082  52		     1		push	edx
- 00000083  BA 00000119 R     1		mov		edx, OFFSET correctTempMsg
+ 00000083  BA 00000107 R     1		mov		edx, OFFSET correctTempMsg
  00000088  E8 00000000 E     1		call	WriteString
  0000008D  5A		     1		pop		edx
 
 				    ; Print converted signed array items in reverse order.
- 0000008E  68 00001163 R	    push            OFFSET tempArray
+ 0000008E  68 00001151 R	    push            OFFSET tempArray
  00000093  E8 00000099		    call            WriteTempsReverse
 
 				    ; Display farewell message.
  00000098  E8 00000000 E	    call            CrLf
 				    mDisplayString  OFFSET farewellMsg
  0000009D  52		     1		push	edx
- 0000009E  BA 00000136 R     1		mov		edx, OFFSET farewellMsg
+ 0000009E  BA 00000124 R     1		mov		edx, OFFSET farewellMsg
  000000A3  E8 00000000 E     1		call	WriteString
  000000A8  5A		     1		pop		edx
 
@@ -261,16 +257,16 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
 				; ---------------------------------------------------------------------------------
 				; Name: ParseTempsFromString
 				;
-				; Parses ASCII data string from a text file buffer, extracts numerical 
+				; Parses ASCII data string from text file buffer, extracts numerical 
 				; digit characters separated by delimiters, and converts them into signed
-				; integers stored sequentially within destination array.
+				; integers that are stored sequentially in tempArray.
 				;
 				; Preconditions:    fileBuffer must contain valid null-terminated string of data.
 				;                   tempArray must hold at least TEMPS_PER_DAY elements.
 				;
 				; Receives:
-				;   [ebp + 12] = address of text-contents buffer
-				;   [ebp + 8]  = address of destination array
+				;   [ebp + 12] = address of fileBuffer
+				;   [ebp + 8]  = address of tempArray
 				;
 				; Returns:
 				;   tempArray  = holds converted signed integer values
@@ -295,20 +291,20 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
  000000CA  FC			    cld                         
 
  000000CB			_readChar:
-				    ; Check if comma, carriage return, line-feed, or end of string is reached and properly deal with them.
+				    ; Check if delimiter, carriage return, line-feed, or end of string is reached.
  000000CB  AC			    lodsb                       
- 000000CC  3C 2C		    cmp     al, DELIMITER       ; Check if comma reached
- 000000CE  74 0F		    je      _endOfToken
+ 000000CC  3C 2C		    cmp     al, DELIMITER       ; Check if delimiter reached
+ 000000CE  74 0F		    je      _elementEnd
  000000D0  3C 0D		    cmp     al, 13              ; Check for carriage return
- 000000D2  74 0B		    je      _endOfToken
- 000000D4  3C 0A		    cmp     al, 10              ; Check and skip line-feeds
+ 000000D2  74 0B		    je      _elementEnd
+ 000000D4  3C 0A		    cmp     al, 10              ; Check for line-feed
  000000D6  74 F3		    je      _readChar
  000000D8  3C 00		    cmp     al, 0               ; Check if end of string
- 000000DA  74 03		    je      _endOfToken
+ 000000DA  74 03		    je      _elementEnd
  000000DC  AA			    stosb                       ; Store AL character in charBuffer
  000000DD  EB EC		    jmp     _readChar
 
- 000000DF			_endOfToken:
+ 000000DF			_elementEnd:
  000000DF  B0 00		    mov     al, 0
  000000E1  AA			    stosb                       ; Null-terminate substring
 
@@ -364,19 +360,19 @@ Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
  0000012D  C9		   *	    leave  
  0000012E  C2 0008		    ret     8
  00000131			ParseTempsFromString ENDP
-Proj6_guardadd.asm(246) : warning A6004:procedure argument or local not referenced : charBuffer
+Proj6_guardadd.asm(245) : warning A6004:procedure argument or local not referenced : charBuffer
 
-				; ---------------------------------------------------------------------------------
+				; -----------------------------------------------------------------------------
 				; Name: WriteTempsReverse
 				;
 				; Traverses a signed integer array backwards (from last element) and displays
-				; each temperature value followed by a comma delimiter, on the console.
+				; each temperature value followed by a delimiter, on the console.
 				;
 				; Preconditions: tempArray must have TEMPS_PER_DAY populated elements.
 				;
 				; Receives:
 				;   [ebp + 8]  = address of tempArray
-				; ---------------------------------------------------------------------------------
+				; -----------------------------------------------------------------------------
  00000131			WriteTempsReverse PROC
  00000131  55			    push    ebp
  00000132  8B EC		    mov     ebp, esp
@@ -413,7 +409,7 @@ Proj6_guardadd.asm(246) : warning A6004:procedure argument or local not referenc
  0000016B			WriteTempsReverse ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 09:48:19
+Microsoft (R) Macro Assembler Version 14.44.35225.0	    06/07/26 10:21:34
 3Temperature Reader Program     (Proj6_guardadd.asm	     Symbols 2 - 1
 
 
@@ -516,7 +512,7 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000011C7 Para	  Public  'DATA'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000011B5 Para	  Public  'DATA'	
 _TEXT  . . . . . . . . . . . . .	32 Bit	 0000016B Para	  Public  'CODE'	
 
 
@@ -576,7 +572,7 @@ ParseTempsFromString . . . . . .	P Near	 000000B0 _TEXT	Length= 00000081 Public 
   negativeFlag . . . . . . . . .	DWord	 bp - 0000000C
   _collectLoop . . . . . . . . .	L Near	 000000C2 _TEXT	
   _readChar  . . . . . . . . . .	L Near	 000000CB _TEXT	
-  _endOfToken  . . . . . . . . .	L Near	 000000DF _TEXT	
+  _elementEnd  . . . . . . . . .	L Near	 000000DF _TEXT	
   _calculateDigit  . . . . . . .	L Near	 000000FE _TEXT	
   _storeElement  . . . . . . . .	L Near	 00000123 _TEXT	
 PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -863,16 +859,16 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
-bytesRead  . . . . . . . . . . .	DWord	 0000015F _DATA	
-correctTempMsg . . . . . . . . .	Byte	 00000119 _DATA	
+bytesRead  . . . . . . . . . . .	DWord	 0000014D _DATA	
+correctTempMsg . . . . . . . . .	Byte	 00000107 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-farewellMsg  . . . . . . . . . .	Byte	 00000136 _DATA	
-fileBuffer . . . . . . . . . . .	Byte	 00000163 _DATA	
-fileErrorMsg . . . . . . . . . .	Byte	 00000102 _DATA	
-fileHandle . . . . . . . . . . .	DWord	 000011C3 _DATA	
-fileNamePrompt . . . . . . . . .	Byte	 000000DA _DATA	
-fileName . . . . . . . . . . . .	Byte	 0000013F _DATA	
+farewellMsg  . . . . . . . . . .	Byte	 00000124 _DATA	
+fileBuffer . . . . . . . . . . .	Byte	 00000151 _DATA	
+fileErrorMsg . . . . . . . . . .	Byte	 000000F0 _DATA	
+fileHandle . . . . . . . . . . .	DWord	 000011B1 _DATA	
+fileNamePrompt . . . . . . . . .	Byte	 000000C8 _DATA	
+fileName . . . . . . . . . . . .	Byte	 0000012D _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
 introPrompt  . . . . . . . . . .	Byte	 00000000 _DATA	
@@ -884,7 +880,7 @@ lightMagenta . . . . . . . . . .	Number	 0000000Dh
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-tempArray  . . . . . . . . . . .	DWord	 00001163 _DATA	
+tempArray  . . . . . . . . . . .	DWord	 00001151 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   

@@ -5,8 +5,8 @@ TITLE Temperature Reader Program     (Proj6_guardadd.asm)
 ; OSU email address: guardadd@oregonstate.edu
 ; Course number/section:   CS271 Section 400
 ; Project Number: 6               Due Date: 6/7/2026
-; Description:  This programs asks the user to enter the name of a file that will contain 
-;               comma-delimited temperature values. The program will then open the file, 
+; Description:  This program asks the user to enter the name of a file that will contain 
+;               delimited temperature values. The program will then open the file, 
 ;               read the temperatures, and print the signed values in reverse order.
 
 INCLUDE Irvine32.inc
@@ -83,9 +83,8 @@ TEMPS_PER_DAY	= 24
 DELIMITER		= ','
 
 .data
-	introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a comma-delimited file",13,10
-					BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values properly",13,10
-					BYTE	"and print the values in reverse order.",13,10,0
+	introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a file containing delimited temperature",13,10
+					BYTE	"values. It will then interpret the temperatures correctly and print them in reverse order.",13,10, 0					
 	fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
 	fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
     correctTempMsg  BYTE    "Correct temperature order:",13,10,0
@@ -147,16 +146,16 @@ main ENDP
 ; ---------------------------------------------------------------------------------
 ; Name: ParseTempsFromString
 ;
-; Parses ASCII data string from a text file buffer, extracts numerical 
+; Parses ASCII data string from text file buffer, extracts numerical 
 ; digit characters separated by delimiters, and converts them into signed
-; integers stored sequentially within destination array.
+; integers that are stored sequentially in tempArray.
 ;
 ; Preconditions:    fileBuffer must contain valid null-terminated string of data.
 ;                   tempArray must hold at least TEMPS_PER_DAY elements.
 ;
 ; Receives:
-;   [ebp + 12] = address of text-contents buffer
-;   [ebp + 8]  = address of destination array
+;   [ebp + 12] = address of fileBuffer
+;   [ebp + 8]  = address of tempArray
 ;
 ; Returns:
 ;   tempArray  = holds converted signed integer values
@@ -178,13 +177,13 @@ _collectLoop:
     cld                         
 
 _readChar:
-    ; Check if comma, carriage return, line-feed, or end of string is reached and properly deal with them.
+    ; Check if delimiter, carriage return, line-feed, or end of string is reached.
     lodsb                       
-    cmp     al, DELIMITER       ; Check if comma reached
+    cmp     al, DELIMITER       ; Check if delimiter reached
     je      _elementEnd
     cmp     al, 13              ; Check for carriage return
     je      _elementEnd
-    cmp     al, 10              ; Check and skip line-feeds
+    cmp     al, 10              ; Check for line-feed
     je      _readChar
     cmp     al, 0               ; Check if end of string
     je      _elementEnd
@@ -245,17 +244,17 @@ _storeElement:
     ret     8
 ParseTempsFromString ENDP
 
-; ---------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------
 ; Name: WriteTempsReverse
 ;
 ; Traverses a signed integer array backwards (from last element) and displays
-; each temperature value followed by a comma delimiter, on the console.
+; each temperature value followed by a delimiter, on the console.
 ;
 ; Preconditions: tempArray must have TEMPS_PER_DAY populated elements.
 ;
 ; Receives:
 ;   [ebp + 8]  = address of tempArray
-; ---------------------------------------------------------------------------------
+; -----------------------------------------------------------------------------
 WriteTempsReverse PROC
     push    ebp
     mov     ebp, esp
