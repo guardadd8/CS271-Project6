@@ -11,7 +11,6 @@ TITLE Temperature Reader Program     (Proj6_guardadd.asm)
 
 INCLUDE Irvine32.inc
 
-
 ; -----------------------------------------------------------------
 ; Name: mGetString
 ;
@@ -87,8 +86,8 @@ DELIMITER		= ','
 .data
 
 	introPrompt		BYTE	"Welcome to the Temperature Reader Program. This program will read a comma-delimited file",13,10
-					BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values and reverse",13,10
-					BYTE	"the ordering to then print them.",13,10,0
+					BYTE	"that must be ASCII-formatted. It will retrieve the stored temperature values properly",13,10
+					BYTE	"and print the values in reverse order.",13,10,0
 	fileNamePrompt	BYTE	"Enter the name of the file to be read: ",0
 	fileErrorMsg	BYTE	"Incorrect file name.",13,10,0
     farewellMsg     BYTE    "Goodbye.",0
@@ -219,7 +218,7 @@ _calculateDigit:
     pop     eax                 
 
     mov     edx, 0              
-    mov     dl, al              ; Move byte to sub-register
+    mov     dl, al              ; Move byte to register
     add     ebx, edx            ; Add digit to current total
 
     lodsb                       
@@ -228,10 +227,10 @@ _calculateDigit:
 
     ; Apply negative sign if set flag
     cmp     negativeFlag, 1
-    jne     _finishStorage
+    jne     _storeElement
     neg     ebx
 
-_finishStorage:
+_storeElement:
     pop     esi                 ; Restore fileBuffer pointer
     pop     edi                 ; Restore tempArray pointer
     
@@ -244,40 +243,46 @@ _finishStorage:
     ret     8
 ParseTempsFromString ENDP
 
+; ---------------------------------------------------------------------------------
+; Name: WriteTempsReverse
+;
+; Traverses a signed integer array backwards (from last element) and displays
+; each temperature value followed by a comma delimiter, on the console.
+;
+; Preconditions: tempArray must have TEMPS_PER_DAY populated elements.
+;
+; Receives:
+;   [ebp + 8]  = address of tempArray
+; ---------------------------------------------------------------------------------
 WriteTempsReverse PROC
     push    ebp
     mov     ebp, esp
     pushad
 
-    mov     esi, [ebp + 8]      ; ESI = pointer to start of tempArray
+    mov     esi, [ebp + 8]      ; tempArray
     
-    ; Calculate the memory offset for the last element (index 23):
-    ; Offset = (TEMPS_PER_DAY - 1) * TYPE tempArray = 23 * 4 = 92 bytes
+    ; Get memory offset (23*4) for last index element
     mov     eax, TEMPS_PER_DAY
-    dec     eax                 ; EAX = 23
-    mov     ebx, 4              ; Each SDWORD element is 4 bytes
-    mul     ebx                 ; EAX = 23 * 4 = 92
+    dec     eax
+    mov     ebx, 4
+    mul     ebx
     
-    add     esi, eax            ; ESI now points directly to the last element
-    mov     ecx, TEMPS_PER_DAY  ; Set loop counter to 24
+    add     esi, eax            ; ESI points to last element
+    mov     ecx, TEMPS_PER_DAY  ; Set item counter
 
 _reverseLoop:
-    ; Register Indirect addressing to fetch and print the signed integer
+    ; Acquire and print the signed integer with delimiter
     mov     eax, [esi]
-    call    WriteInt            ; Prints the signed value
+    call    WriteInt
+    mDisplayChar DELIMITER
+    sub     esi, 4              ; Move backwards to next SDWORD element
+    loop    _reverseLoop        ; Loop until all elements are done
 
-    ; Print the delimiter after the number
-    mDisplayChar DELIMITER      ; Invokes your required I/O macro
-
-    ; Move pointer backward by 1 SDWORD element (4 bytes)
-    sub     esi, 4              
-    loop    _reverseLoop        ; Decrement ECX and repeat until 24 elements are done
-
-    call    CrLf                ; Drop to a new line at the very end of the line output
+    call    CrLf                ; Move to next line after output line completion
     
     popad
     pop     ebp
-    ret     4                   ; Clean up the single 4-byte stack parameter
+    ret     4
 WriteTempsReverse ENDP
 
 END main
